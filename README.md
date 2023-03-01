@@ -14,11 +14,7 @@ client:
 
 client.exe DESKTOP-H31VE59 3490 < compressed.txt
 
-OR
-
 client.exe DESKTOP-H31VE59 3490 < compressed2.txt
-
-OR
 
 client.exe DESKTOP-H31VE59 3490 < compressed3.txt
 
