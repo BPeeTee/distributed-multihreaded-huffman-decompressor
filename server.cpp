@@ -139,19 +139,19 @@ void create_huffman_server(HuffmanNode* root, int portnoParameter){
 
     listen(sockfd, 5);
     clilen = sizeof(cli_addr);
-    
     signal(SIGCHLD, fireman);
+
     while(true){
         newsockfd = accept(sockfd, (struct sockaddr*) &cli_addr, (socklen_t*) &clilen); //creating a new sockfd thats handling requests from client
         if(fork() == 0){
             if(newsockfd < 0)
                 exit(1);
             bzero(buffer, 256); //char array all char \0
-            fgets(buffer, 255, stdin);
             n = recv(newsockfd, buffer, sizeof(buffer) / sizeof(char), 0);
             if(n < 0)
                 exit(1);
-            
+
+            char test;
             char my_char = root->decode(buffer);
             memset(buffer, 0, sizeof(buffer));
             n = send(newsockfd, &my_char, sizeof(my_char), 0);
