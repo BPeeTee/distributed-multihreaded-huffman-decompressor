@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <fstream>
 
@@ -81,7 +82,7 @@ void *code_to_string_through_server(void *decompress_info_void_ptr){
     char *message = new char[decompress_info_ptr->str.length() + 1];
     strcpy(message, cstr);
     bzero(buffer, 256); //char array all char \0
-
+    
     n = send(sockfd, message, strlen(message), 0);
     if(n < 0)
         exit(1);
@@ -103,6 +104,8 @@ void *code_to_string_through_server(void *decompress_info_void_ptr){
 void decompress_huffman_code(int portno, const char* serverName){
     std::string line;
     int outputLength = 0;
+    /*we implement a hashmap since unlike PA1, we don't know the size of the output array;
+    so we store the values in this datastructure and count up the positions later to get the size*/
     std::map<std::string, std::vector<int>> positionsMap;
     static std::vector<decompress_info*> array_of_decompress_info_structs;
     static std::vector<pthread_t> tid;
@@ -122,21 +125,21 @@ void decompress_huffman_code(int portno, const char* serverName){
             }
             else{
                 positionsMap[code].push_back(stoi(buffer));
+                /*length of output array gets incremented by 1 each time we come across a
+                position cause there will always be n positions*/
                 outputLength ++;
             }
         }
     }
-
+    
+    //now we have the guarunteed size of the output array, so we can finally instantiate it
     char output[outputLength];
 
+    //reading codes and their positions from hashmap
     for(auto mapElements : positionsMap){
         //n POSIX threads are created (n is the number of lines in the compressed file)
         pthread_t thread;
         decompress_info* temp = new decompress_info(mapElements.first, mapElements.second, output, portno, serverName);
-        /*std::cout << it.first << ": ";
-        for(int i = 0; i < it.second.size(); i++)
-            std::cout << it.second[i] << " ";
-        std::cout << std::endl;*/
         tid.push_back(thread);
         array_of_decompress_info_structs.push_back(temp);
     }
@@ -145,15 +148,17 @@ void decompress_huffman_code(int portno, const char* serverName){
         /*
         each thread receives a pointer to a struct that contains the following:
         struct decompress_info{
-            HuffmanNode* root;
             std::string str;
             std::vector<int> positions;
             char* output;
+            int portno;
+            const char* serverName;
         }
-        (1) a pointer to the root node of the Huffman tree
-        (2) the binary code
-        (3) a vector of positions in which the code should be placed in the output array
-        (4) a pointer to the output array that will be mutated by each thread
+        (1) the binary code
+        (2) a vector of positions in which the code should be placed in the output array
+        (3) a pointer to the output array that will be mutated by each thread
+        (4) the port number used to create a socket by each thread
+        (5) the server name used to retrieve the hostent structure by each thread
         */
         if(pthread_create(&tid[i], NULL, code_to_string_through_server, (void*)array_of_decompress_info_structs[i])){
             fprintf(stderr, "Error creating thread\n");
@@ -165,7 +170,7 @@ void decompress_huffman_code(int portno, const char* serverName){
     for(int i = 0; i < tid.size(); i++)
         pthread_join(tid[i], NULL);
     /*After threads mutate the output array,
-    and are joined, the original message is printed after*/
+    and are joined, the original message is printed*/
     std::cout << "Original message: " << convertToString(output, sizeof(output) / sizeof(char)) << std::endl;
 }
 
