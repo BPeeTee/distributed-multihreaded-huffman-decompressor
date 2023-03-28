@@ -54,7 +54,7 @@ void *code_to_string_through_server(void *decompress_info_void_ptr){
     const char* serverName;
     struct sockaddr_in serv_addr;
     struct hostent *server; //stores info about a server (ip, name, etc..)
-    char decoded_string;
+    char decoded_char;
 
     serverName = decompress_info_ptr->serverName;
     portno = decompress_info_ptr->portno; // transform portno into integer and set it as port no -- next need ip of server
@@ -95,17 +95,18 @@ void *code_to_string_through_server(void *decompress_info_void_ptr){
         exit(1);
 
     //receive decoded character from server
-    n = recv(sockfd, &decoded_string, sizeof(decoded_string), 0);
+    n = recv(sockfd, &decoded_char, sizeof(decoded_char), 0);
     if(n < 0)
         exit(1);
 
     for(int i = 0; i < decompress_info_ptr->positions.size(); i++){
     /*stores the decompressed character (c) a total of (size of positions vector) times
     in our output array which was created in and therefore accessible by the main thread*/
-        *(decompress_info_ptr->output + decompress_info_ptr->positions[i]) = decoded_string;
+        *(decompress_info_ptr->output + decompress_info_ptr->positions[i]) = decoded_char;
 
     }
     close(sockfd);
+    delete[] message;
     return nullptr;
 }
 
@@ -182,7 +183,10 @@ void decompress_huffman_code(int portno, const char* serverName){
     std::cout << "Length message: " << sizeof(output) << std::endl;
     and are joined, the original message is printed*/
     std::cout << "Original message: " << convertToString(output, outputLength) << std::endl;
-
+    
+    for(int i = 0; i < array_of_decompress_info_structs.size(); i++)
+        delete array_of_decompress_info_structs[i];
+    
     delete[] output;
 }
 
