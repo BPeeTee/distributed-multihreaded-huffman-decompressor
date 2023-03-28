@@ -1,3 +1,5 @@
+/**************************************PLEASE READ*************************************************/
+/****************SOCKET CODE HAS BEEN REFERENCED FROM PROFESSOR CARLOS RINCON************************/
 #include <iostream>
 #include <fstream>
 
@@ -114,13 +116,11 @@ void print_huffman_tree(HuffmanNode* root){
 }
 
 void fireman(int){
-    while(waitpid(-1, NULL, WNOHANG) > 0)
-        std::cout << "A child processes ended" << std::endl;
+    while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
 void create_huffman_server(HuffmanNode* root, int portnoParameter){
     int sockfd, newsockfd, portno, clilen;
-    char buffer[256];
     struct sockaddr_in serv_addr, cli_addr;
     int n;
 
@@ -146,21 +146,29 @@ void create_huffman_server(HuffmanNode* root, int portnoParameter){
         if(fork() == 0){
             if(newsockfd < 0)
                 exit(1);
-            bzero(buffer, 256); //char array all char \0
-            n = recv(newsockfd, buffer, sizeof(buffer) / sizeof(char), 0);
+
+            //receive size of string from server
+            int size;
+            n = recv(newsockfd, &size, sizeof(int), 0);
             if(n < 0)
                 exit(1);
 
-            char test;
+            char *buffer = new char[size];
+            bzero(buffer, size); //char array all char \0
+
+            //receive string from client
+            n = recv(newsockfd, buffer, size, 0);
+            if(n < 0)
+                exit(1);
+
             char my_char = root->decode(buffer);
-            memset(buffer, 0, sizeof(buffer));
             n = send(newsockfd, &my_char, sizeof(my_char), 0);
             if(n < 0)
                 exit(1);
             close(newsockfd);
+            delete[] buffer;
             _exit(0);
         }
-        wait(0); //server for single request
     }
 
     close(sockfd); //close socket
