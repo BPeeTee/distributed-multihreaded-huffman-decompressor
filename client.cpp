@@ -1,4 +1,5 @@
-
+/**************************************PLEASE READ*************************************************/
+/****************SOCKET CODE HAS BEEN REFERENCED FROM PROFESSOR CARLOS RINCON************************/
 #include <iostream>
 #include <fstream>
 
@@ -35,7 +36,7 @@ struct decompress_info{
     int portno;
     const char* serverName;
 
-    decompress_info(std::string str, std::vector<int> positions, char* output, int portno, const char* serverName){
+    decompress_info(std::string str, std::vector<int> positions, char*& output, int portno, const char* serverName){
         this->str = str;
         copy(positions.begin(), positions.end(), back_inserter(this->positions));
         this->output = output;
@@ -53,7 +54,7 @@ void *code_to_string_through_server(void *decompress_info_void_ptr){
     const char* serverName;
     struct sockaddr_in serv_addr;
     struct hostent *server; //stores info about a server (ip, name, etc..)
-    char buffer[256];
+    char decoded_string;
 
     serverName = decompress_info_ptr->serverName;
     portno = decompress_info_ptr->portno; // transform portno into integer and set it as port no -- next need ip of server
@@ -79,25 +80,33 @@ void *code_to_string_through_server(void *decompress_info_void_ptr){
 
     //connected...
     const char* cstr = decompress_info_ptr->str.c_str();
-    char *message = new char[decompress_info_ptr->str.length() + 1];
+    int sMessage = decompress_info_ptr->str.length() + 1;
+    char *message = new char[sMessage];
     strcpy(message, cstr);
-    bzero(buffer, 256); //char array all char \0
-    
+
+    //send size of string to server
+    n = send(sockfd, &sMessage, sizeof(int), 0);
+    if(n < 0)
+        exit(1);
+
+    //send string to server
     n = send(sockfd, message, strlen(message), 0);
     if(n < 0)
         exit(1);
 
-    n = recv(sockfd, buffer, sizeof(buffer), 0);
+    //receive decoded character from server
+    n = recv(sockfd, &decoded_string, sizeof(decoded_string), 0);
     if(n < 0)
         exit(1);
 
-    //printf("$s\n", buffer);
     for(int i = 0; i < decompress_info_ptr->positions.size(); i++){
     /*stores the decompressed character (c) a total of (size of positions vector) times
     in our output array which was created in and therefore accessible by the main thread*/
-        decompress_info_ptr->output[decompress_info_ptr->positions[i]] = buffer[0];
+        *(decompress_info_ptr->output + decompress_info_ptr->positions[i]) = decoded_string;
+
     }
     close(sockfd);
+    return nullptr;
 }
 
 //compressed file is decoded using multi-threaded approach
@@ -131,9 +140,9 @@ void decompress_huffman_code(int portno, const char* serverName){
             }
         }
     }
-    
-    //now we have the guarunteed size of the output array, so we can finally instantiate it
-    char output[outputLength];
+
+    //now we have the guarunteed size of the output array, so we can finally instantiate it bareable length arrays, not a standard in c++, use dynamic
+    char *output = new char[outputLength];
 
     //reading codes and their positions from hashmap
     for(auto mapElements : positionsMap){
@@ -170,8 +179,11 @@ void decompress_huffman_code(int portno, const char* serverName){
     for(int i = 0; i < tid.size(); i++)
         pthread_join(tid[i], NULL);
     /*After threads mutate the output array,
+    std::cout << "Length message: " << sizeof(output) << std::endl;
     and are joined, the original message is printed*/
-    std::cout << "Original message: " << convertToString(output, sizeof(output) / sizeof(char)) << std::endl;
+    std::cout << "Original message: " << convertToString(output, outputLength) << std::endl;
+
+    delete[] output;
 }
 
 
