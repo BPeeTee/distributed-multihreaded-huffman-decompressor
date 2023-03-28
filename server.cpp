@@ -88,7 +88,7 @@ void build_huffman_tree(std::vector<HuffmanNode*> &huffmanNodeVector){
         root->right = right;
 
         huffmanNodeVector.push_back(root);
-
+        delete root;
         sort(huffmanNodeVector.begin(), huffmanNodeVector.end(), HuffmanNodeComparison());
     }
 }
@@ -113,6 +113,18 @@ void print_huffman_tree(HuffmanNode* root){
         std::cout << "Symbol: " << root->c << ", Frequency: " << root->freq << ", Code: " << root->code << std::endl;
     print_huffman_tree(root->left);
     print_huffman_tree(root->right);
+}
+
+//releases all memory occupied by nodes of huffman tree
+void delete_huffman_tree(HuffmanNode* root){
+     if (root == nullptr) {
+        return; // if the root is null, return immediately
+    }
+    // recursively delete the left and right subtrees
+    delete_huffman_tree(root->left);
+    delete_huffman_tree(root->right);
+    // delete the current node
+    delete root;
 }
 
 void fireman(int){
@@ -193,6 +205,12 @@ int main(int argc/*2 arguments from command line*/, char**argv/*file name, port 
     print_huffman_tree(huffmanNodeVector[0]);
     //4. Create server that recieves codes and responds with corresponding character
     create_huffman_server(huffmanNodeVector[0], portno);
+    //5. Delete memory allocated by all nodes in huffman tree
+    delete_huffman_tree(huffmanNodeVector[0]);
 
+    //delete allocated memory
+    for(int i = 0; i < huffmanNodeVector.size(); i++)
+        delete huffmanNodeVector[i];
+    
     return 0;
 }
